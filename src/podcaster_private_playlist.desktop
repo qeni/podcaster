@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=0.1
+Type=Application
+Name=Podcaster private playlist
+Comment=Youtube downloader
+Exec=/usr/local/bin/podcaster
+Terminal=true
+Categories=AudioVideo;
+Keywords=audio;video;youtube;downloader;converter
+Icon=/usr/share/icons/hicolor/64x64/apps/podcaster.ico

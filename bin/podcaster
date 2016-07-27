@@ -1,0 +1,225 @@
+#!/usr/bin/env python3
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from gi.repository import Gtk, GObject
+import gi
+import os
+import _thread
+gi.require_version('Gtk', '3.0')
+
+config_file = os.environ['HOME'] + "/.config/podcaster/config"
+icon = '/usr/share/icons/hicolor/64x64/apps/podcaster.ico'
+
+
+class MainWindow(Gtk.Window):
+
+    def __init__(self):
+        Gtk.Window.__init__(self, title='Podcaster')
+        self.set_border_width(10)
+        # self.set_default_size(350, 500)
+        self.set_resizable(False)
+        self.set_position(Gtk.WindowPosition.CENTER)
+        self.set_default_icon_from_file(icon)
+
+        header = Gtk.HeaderBar(title='Podcaster')
+        header.set_subtitle('Download from YouTube')
+        header.props.show_close_button = True
+        image = Gtk.Image()
+        image.set_from_file(icon)
+        header.add(image)
+        self.set_titlebar(header)
+
+        self.grid = Gtk.Grid()
+        self.grid.set_column_spacing(10)
+        self.grid.set_row_spacing(2)
+        self.add(self.grid)
+
+        self.button_start = Gtk.Button(label='Start')
+        self.button_start.connect('clicked', self.activate_program)
+        self.button_stop = Gtk.Button(label='Stop')
+        self.button_stop.connect('clicked', self.deactivate_program)
+        self.button_stop.set_sensitive(False)
+
+        self.progressbar = Gtk.ProgressBar()
+        self.progressbar.set_fraction(0.0)
+        self.activity_mode = False
+
+        self.label_mail = Gtk.Label("E-mail", xalign=0)
+        self.label_link = Gtk.Label("Link", xalign=0)
+        self.label_destination = Gtk.Label("Destination path", xalign=0)
+        self.label_numbering = Gtk.Label("Numbering files", xalign=0)
+        self.label_playlist_type = Gtk.Label("Private playlist", xalign=0)
+        self.label_empty = Gtk.Label("", xalign=0)
+        self.label_empty2 = Gtk.Label("", xalign=0)
+        self.label_format = Gtk.Label("Format", xalign=0)
+
+        self.switch_numbering = Gtk.Switch()
+        self.switch_numbering.set_active(False)
+        self.switch_numbering.props.valign = Gtk.Align.CENTER
+        self.switch_playlist_type = Gtk.Switch()
+        self.switch_playlist_type.set_active(False)
+        self.switch_playlist_type.props.valign \
+            = Gtk.Align.CENTER
+        self.switch_playlist_type.connect(
+            "notify::active", self.switch_mail_entry)
+
+        self.combo_format = Gtk.ComboBoxText()
+        self.combo_format.append('bestaudio', 'Best audio')
+        self.combo_format.append('bestvideo', 'Best video')
+        self.combo_format.append('mp4', 'mp4')
+        self.combo_format.set_active(0)
+
+        self.entry_mail = Gtk.Entry()
+        self.entry_mail.set_sensitive(False)
+        self.entry_link = Gtk.Entry()
+        self.entry_destination = Gtk.Entry()
+
+        self.timeout_id = GObject.timeout_add(90, self.on_timeout, None)
+
+        self.create_layout()
+
+    def create_layout(self):
+        self.grid.add(self.button_start)
+        self.grid.add(self.button_stop)
+        self.grid.attach_next_to(
+            self.label_mail, self.button_start, Gtk.PositionType.BOTTOM, 1, 2)
+        self.grid.attach_next_to(
+            self.label_link, self.label_mail, Gtk.PositionType.BOTTOM, 1, 2)
+        self.grid.attach_next_to(
+            self.label_destination, self.label_link, Gtk.PositionType.BOTTOM, 1, 2)
+        self.grid.attach_next_to(
+            self.label_empty, self.label_destination, Gtk.PositionType.BOTTOM, 1, 2)
+        self.grid.attach_next_to(
+            self.label_numbering, self.label_empty, Gtk.PositionType.BOTTOM, 1, 2)
+        self.grid.attach_next_to(
+            self.label_playlist_type, self.label_numbering, Gtk.PositionType.BOTTOM, 1, 2)
+        self.grid.attach_next_to(
+            self.label_format, self.label_playlist_type, Gtk.PositionType.BOTTOM, 1, 2)
+        self.grid.attach_next_to(
+            self.label_empty2, self.label_format, Gtk.PositionType.BOTTOM, 1, 2)
+        self.grid.attach_next_to(
+            self.progressbar, self.label_empty2, Gtk.PositionType.BOTTOM, 2, 2)
+
+        self.grid.attach_next_to(
+            self.entry_mail, self.label_mail, Gtk.PositionType.RIGHT, 1, 2)
+        self.grid.attach_next_to(
+            self.entry_link, self.label_link, Gtk.PositionType.RIGHT, 1, 2)
+        self.grid.attach_next_to(
+            self.entry_destination, self.label_destination, Gtk.PositionType.RIGHT, 1, 2)
+        self.grid.attach_next_to(
+            self.switch_numbering, self.label_numbering, Gtk.PositionType.RIGHT, 1, 2)
+        self.grid.attach_next_to(
+            self.switch_playlist_type, self.label_playlist_type, Gtk.PositionType.RIGHT, 1, 2)
+        self.grid.attach_next_to(
+            self.combo_format, self.label_format, Gtk.PositionType.RIGHT, 1, 2)
+
+    def switch_mail_entry(self, switch, gparam):
+        if self.switch_playlist_type.get_active():
+            self.entry_mail.set_sensitive(True)
+        else:
+            self.entry_mail.set_sensitive(False)
+
+    def start_progressbar(self, widget):
+        self.progressbar.set_fraction(0.0)
+        self.activity_mode = True
+        self.progressbar.pulse()
+
+    def activate_program(self, widget):
+        self.button_start.set_sensitive(False)
+        self.button_stop.set_sensitive(True)
+        _thread.start_new_thread(self.start_progressbar, (widget,))
+        _thread.start_new_thread(self.start_download, (widget,))
+
+    def deactivate_program(self, widget):
+        os.system('killall youtube-dl')
+        self.progressbar.set_fraction(0.0)
+        self.button_start.set_sensitive(True)
+        self.button_stop.set_sensitive(False)
+        self.activity_mode = False
+
+    def on_timeout(self, user_data):
+        """
+        Update value on the progress bar
+        """
+        if self.activity_mode:
+            self.progressbar.pulse()
+        else:
+            new_value = self.progressbar.get_fraction() + 0.01
+            if new_value > 1:
+                new_value = 0
+
+        return True
+
+    def start_download(self, widget):
+        mail_value = self.entry_mail.get_text()
+        os.environ["mail_value"] = mail_value
+
+        link_value = self.entry_link.get_text()
+        os.environ["link_value"] = link_value
+
+        destination_value = self.entry_destination.get_text()
+        os.environ["destination_value"] = destination_value
+
+        numbering_value = self.switch_numbering.get_state()
+        private_value = self.switch_playlist_type.get_state()
+        format_value = self.combo_format.get_active_text()
+
+        command = 'youtube-dl --restrict-filenames --no-overwrites --continue'
+
+        if private_value:
+            command += ' --username ' + mail_value
+
+        command += ' ' + link_value
+
+        if numbering_value:
+            command += ' -o ' + destination_value + \
+                '/%(autonumber)s_%(title)s.%(ext)s" --autonumber-size 2'
+        else:
+            command += ' -o ' + destination_value + '/%(title)s.%(ext)s'
+
+        if format_value == "Best video":
+            command += ' -f bestvideo'
+        elif format_value == "Best audio":
+            command += ' -f bestaudio'
+        elif format_value == "mp4":
+            command += ' -f 22/18'
+
+        os.environ["command"] = command
+        os.system("$command")
+
+        self.deactivate_program(widget)
+
+
+def main():
+    win = MainWindow()
+    win.connect('delete-event', Gtk.main_quit)
+
+    text = list()
+    if os.path.isfile(config_file):
+        with open(config_file, 'r') as f:
+            for line in f:
+                text.append(line.strip())
+
+    if len(text) > 2:
+        win.entry_mail.set_text(text[0])
+        win.entry_link.set_text(text[1])
+        win.entry_destination.set_text(text[2])
+
+    win.show_all()
+    Gtk.main()
+
+
+if __name__ == "__main__":
+    main()
