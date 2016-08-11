@@ -2,7 +2,7 @@
 
 BIN="./bin/podcaster"
 ICON="./img/podcaster.ico"
-CONFIG="./src/config"
+CONFIG="./src/podcaster.ini"
 DEST_BIN="/usr/local/bin/podcaster"
 DEST_ICON="/usr/share/icons/hicolor/64x64/apps/podcaster.ico"
 DEST_DESKTOP="/usr/share/applications"

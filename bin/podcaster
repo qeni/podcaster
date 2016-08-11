@@ -14,12 +14,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from gi.repository import Gtk, GObject
+import configparser
 import gi
 import os
 import _thread
 gi.require_version('Gtk', '3.0')
 
-config_file = os.environ['HOME'] + "/.config/podcaster/config"
+config_file = os.environ['HOME'] + "/.config/podcaster/podcaster.ini"
 icon = '/usr/share/icons/hicolor/64x64/apps/podcaster.ico'
 
 
@@ -28,7 +29,7 @@ class MainWindow(Gtk.Window):
     def __init__(self):
         Gtk.Window.__init__(self, title='Podcaster')
         self.set_border_width(10)
-        # self.set_default_size(350, 500)
+        self.set_default_size(350, 500)
         self.set_resizable(False)
         self.set_position(Gtk.WindowPosition.CENTER)
         self.set_default_icon_from_file(icon)
@@ -61,25 +62,32 @@ class MainWindow(Gtk.Window):
         self.label_destination = Gtk.Label("Destination path", xalign=0)
         self.label_numbering = Gtk.Label("Numbering files", xalign=0)
         self.label_playlist_type = Gtk.Label("Private playlist", xalign=0)
+        self.label_playlist_reversed = Gtk.Label("Download from last", xalign=0)
         self.label_empty = Gtk.Label("", xalign=0)
         self.label_empty2 = Gtk.Label("", xalign=0)
         self.label_format = Gtk.Label("Format", xalign=0)
+        self.label_max = Gtk.Label("Max number of videos", xalign=0)
 
         self.switch_numbering = Gtk.Switch()
-        self.switch_numbering.set_active(False)
         self.switch_numbering.props.valign = Gtk.Align.CENTER
         self.switch_playlist_type = Gtk.Switch()
-        self.switch_playlist_type.set_active(False)
         self.switch_playlist_type.props.valign \
             = Gtk.Align.CENTER
         self.switch_playlist_type.connect(
             "notify::active", self.switch_mail_entry)
+        self.switch_playlist_reversed = Gtk.Switch()
+        self.switch_playlist_reversed.props.valign \
+            = Gtk.Align.CENTER
 
         self.combo_format = Gtk.ComboBoxText()
-        self.combo_format.append('bestaudio', 'Best audio')
-        self.combo_format.append('bestvideo', 'Best video')
-        self.combo_format.append('mp4', 'mp4')
-        self.combo_format.set_active(0)
+        self.formats = ['bestaudio', 'bestvideo', 'mp4', 'mp3']
+        for format in self.formats:
+            self.combo_format.append(format, format)
+
+        self.combo_max = Gtk.ComboBoxText()
+        self.max_numbers = ['all', '3', '5', '10', '20', '30', '40', '50', '100']
+        for number in self.max_numbers:
+            self.combo_max.append(number, number)
 
         self.entry_mail = Gtk.Entry()
         self.entry_mail.set_sensitive(False)
@@ -106,9 +114,13 @@ class MainWindow(Gtk.Window):
         self.grid.attach_next_to(
             self.label_playlist_type, self.label_numbering, Gtk.PositionType.BOTTOM, 1, 2)
         self.grid.attach_next_to(
-            self.label_format, self.label_playlist_type, Gtk.PositionType.BOTTOM, 1, 2)
+            self.label_playlist_reversed, self.label_playlist_type, Gtk.PositionType.BOTTOM, 1, 2)
         self.grid.attach_next_to(
-            self.label_empty2, self.label_format, Gtk.PositionType.BOTTOM, 1, 2)
+            self.label_format, self.label_playlist_reversed, Gtk.PositionType.BOTTOM, 1, 2)
+        self.grid.attach_next_to(
+            self.label_max, self.label_format, Gtk.PositionType.BOTTOM, 1, 2)
+        self.grid.attach_next_to(
+            self.label_empty2, self.label_max, Gtk.PositionType.BOTTOM, 1, 2)
         self.grid.attach_next_to(
             self.progressbar, self.label_empty2, Gtk.PositionType.BOTTOM, 2, 2)
 
@@ -123,7 +135,11 @@ class MainWindow(Gtk.Window):
         self.grid.attach_next_to(
             self.switch_playlist_type, self.label_playlist_type, Gtk.PositionType.RIGHT, 1, 2)
         self.grid.attach_next_to(
+            self.switch_playlist_reversed, self.label_playlist_reversed, Gtk.PositionType.RIGHT, 1, 2)
+        self.grid.attach_next_to(
             self.combo_format, self.label_format, Gtk.PositionType.RIGHT, 1, 2)
+        self.grid.attach_next_to(
+            self.combo_max, self.label_max, Gtk.PositionType.RIGHT, 1, 2)
 
     def switch_mail_entry(self, switch, gparam):
         if self.switch_playlist_type.get_active():
@@ -174,9 +190,11 @@ class MainWindow(Gtk.Window):
 
         numbering_value = self.switch_numbering.get_state()
         private_value = self.switch_playlist_type.get_state()
+        reversed_value = self.switch_playlist_reversed.get_state()
         format_value = self.combo_format.get_active_text()
+        max_value = self.combo_max.get_active_text()
 
-        command = 'youtube-dl --restrict-filenames --no-overwrites --continue'
+        command = 'youtube-dl --restrict-filenames --no-overwrites --continue --ignore-errors --ignore-config --yes-playlist --no-part'
 
         if private_value:
             command += ' --username ' + mail_value
@@ -189,33 +207,59 @@ class MainWindow(Gtk.Window):
         else:
             command += ' -o ' + destination_value + '/%(title)s.%(ext)s'
 
-        if format_value == "Best video":
+        if reversed_value:
+            command += ' --playlist-reverse'
+
+        if format_value == "bestvideo":
             command += ' -f bestvideo'
-        elif format_value == "Best audio":
+        elif format_value == "bestaudio":
             command += ' -f bestaudio'
         elif format_value == "mp4":
             command += ' -f 22/18'
+        elif format_value == "mp3":
+            command += ' -x --audio-format mp3 --audio-quality 0'
+
+        if max_value.isdigit():
+            command += ' --playlist-end ' + max_value
 
         os.environ["command"] = command
         os.system("$command")
+        # print(command)    # just for testing
 
         self.deactivate_program(widget)
+
+    def parse_config(self, widget):
+        config = configparser.ConfigParser()
+        config.read(config_file)
+        self.entry_mail.set_text(config["Data"]['mail'])
+        self.entry_link.set_text(config["Data"]['link'])
+        self.entry_destination.set_text(config["Data"]['destination'])
+
+        self.switch_numbering.set_active(config.getboolean("Playlist", "numbering_playlist"))
+        self.switch_playlist_type.set_active(config.getboolean("Playlist", "private_playlist"))
+        self.switch_playlist_reversed.set_active(config.getboolean("Playlist", "download_from_last"))
+
+        ctr = 0
+        for format in self.formats:
+            if format == config["Other"]['format']:
+                self.combo_format.set_active(ctr)
+                break
+            ctr += 1
+
+        ctr = 0
+        for number in self.max_numbers:
+            if number == config["Other"]['max_number']:
+                self.combo_max.set_active(ctr)
+                break
+            ctr += 1
 
 
 def main():
     win = MainWindow()
     win.connect('delete-event', Gtk.main_quit)
 
-    text = list()
     if os.path.isfile(config_file):
-        with open(config_file, 'r') as f:
-            for line in f:
-                text.append(line.strip())
-
-    if len(text) > 2:
-        win.entry_mail.set_text(text[0])
-        win.entry_link.set_text(text[1])
-        win.entry_destination.set_text(text[2])
+        win.parse_config("")
 
     win.show_all()
     Gtk.main()

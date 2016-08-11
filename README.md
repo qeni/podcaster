@@ -5,14 +5,7 @@ Podcaster is an application written in Python with GTK library that allows you t
 
 Config file
 =====================
-Config file should be in ~/.config/podcaster/config. 
-It has only 3 lines:
-
-➣ e-mail - e-mail address of your YouTube account, needed only for private playlists
-
-➣ link - link to video/playlists you want to download
-
-➣ path - where you want to save files (absolute path)
+Config file should be in ~/.config/podcaster/config.ini. 
 
 
 Installing
@@ -34,9 +27,19 @@ Installing
         ```
 
     4) ```
+        python-configparser 
+        ```
+
+    5) ```
         youtube-dl>=2016.07.26.2
         ```
     
+    6*) ```
+        lame and libav-tools 
+        ```
+
+ *for mp3 format
+
 * Run install.sh shell script as a user
 
     ```
@@ -49,5 +52,5 @@ If you want to download something from private playlist, select 'Podcaster priva
 
 Program layout:
 =====================
-![program layout](https://raw.github.com/qeni/podcaster/master/img/still.png)
-![program layout](https://raw.github.com/qeni/podcaster/master/img/working.png)
+![program layout](https://raw.github.com/qeni/podcaster/master/img/clean.png)
+![program layout](https://raw.github.com/qeni/podcaster/master/img/busy.png)
