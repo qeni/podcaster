@@ -24,22 +24,28 @@ Installing
         ```
 
     3) ```
-        libgtk>=3.0
+        libgtk-3-0
         ```
 
     4) ```
         python-configparser 
         ```
 
-    5) ```
-        youtube-dl>=2016.07.26.2
-        ```
-    
-    6*) ```
+    5*) ```
         lame and libav-tools 
         ```
 
  *for mp3 format
+
+* Install youtube-dl
+
+    ```
+    sudo wget https://yt-dl.org/downloads/latest/youtube-dl -O /usr/local/bin/youtube-dl
+    ```
+
+    ```
+    sudo chmod a+rx /usr/local/bin/youtube-dl
+    ```
 
 * Run install.sh shell script as a user
 
