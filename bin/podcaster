@@ -203,7 +203,7 @@ class MainWindow(Gtk.Window):
 
         if numbering_value:
             command += ' -o ' + destination_value + \
-                '/%(autonumber)s_%(title)s.%(ext)s" --autonumber-size 2'
+                '/%(autonumber)s_%(title)s.%(ext)s --autonumber-size 2'
         else:
             command += ' -o ' + destination_value + '/%(title)s.%(ext)s'
 
