@@ -5,7 +5,8 @@ Podcaster is an application written in Python with GTK library that allows you t
 
 Config file
 =====================
-Config file should be in ~/.config/podcaster/config.ini. 
+Config file should be in ~/.config/podcaster/podcaster.ini. All entries and
+options can be set automatically with this file.
 
 
 Installing
